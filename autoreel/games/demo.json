@@ -1,0 +1,12 @@
+{
+  "name": "Ember Drift",
+  "url": "../examples/demo-game/index.html",
+  "hook": "A bot played my game for 60 seconds. These are the best bits.",
+  "viewport": [1280, 720],
+  "seconds": 60,
+  "loadWait": 500,
+  "start": [{ "click": "#play" }, { "wait": 500 }],
+  "bot": { "type": "explorer", "mouseLook": true, "click": true, "keys": { "sprint": null } },
+  "notes": ["Enemies now explode into sparks", "Triple-shot spread on every trigger pull", "Screen shake on every hit"],
+  "notesTitle": "Sparks and shake"
+}
