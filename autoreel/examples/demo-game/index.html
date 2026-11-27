@@ -1,0 +1,28 @@
+<!doctype html><meta charset="utf-8"><title>Ember Drift (autoreel demo)</title>
+<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}canvas{display:block;width:100vw;height:100vh}
+#start{position:fixed;inset:0;display:grid;place-items:center;background:#0b0b18;color:#fff;font:700 40px system-ui}button{font:inherit;padding:14px 30px}</style>
+<div id="start"><button id="play">Play</button></div><canvas id="c"></canvas>
+<script>
+// A tiny arena game to test autoreel: WASD to drift, mouse to aim, click or Space to fire.
+const c=document.getElementById('c'),x=c.getContext('2d');let W,H;const fit=()=>{W=c.width=innerWidth;H=c.height=innerHeight};fit();onresize=fit;
+const keys={},P={x:0,y:0,vx:0,vy:0,a:0},bullets=[],foes=[],parts=[];let shake=0,score=0,running=false,t=0;
+onkeydown=e=>{keys[e.key.toLowerCase()]=1;if(e.code==='Space')fire()};onkeyup=e=>keys[e.key.toLowerCase()]=0;
+onmousemove=e=>{P.a+=e.movementX*0.004};onmousedown=fire;
+document.getElementById('play').onclick=()=>{document.getElementById('start').remove();running=true};
+function fire(){if(!running)return;for(let i=-1;i<=1;i++)bullets.push({x:P.x,y:P.y,vx:Math.cos(P.a+i*.12)*14,vy:Math.sin(P.a+i*.12)*14,l:60})}
+function boom(px,py,col,n=40){shake=12;for(let i=0;i<n;i++){const a=Math.random()*7,s=Math.random()*8;parts.push({x:px,y:py,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:40+Math.random()*30,col})}}
+function step(){t++;const sp=.6;if(keys.w){P.vx+=Math.cos(P.a)*sp;P.vy+=Math.sin(P.a)*sp}if(keys.s){P.vx-=Math.cos(P.a)*sp;P.vy-=Math.sin(P.a)*sp}
+if(keys.a)P.a-=.06;if(keys.d)P.a+=.06;P.vx*=.94;P.vy*=.94;P.x+=P.vx;P.y+=P.vy;
+if(t%40===0&&foes.length<30){const a=Math.random()*7;foes.push({x:P.x+Math.cos(a)*700,y:P.y+Math.sin(a)*700,r:14+Math.random()*20,h:Math.random()*360})}
+for(const f of foes){const dx=P.x-f.x,dy=P.y-f.y,d=Math.hypot(dx,dy)||1;f.x+=dx/d*1.6;f.y+=dy/d*1.6;if(d<f.r+12){boom(P.x,P.y,'#fff',80);f.dead=1;score=0}}
+for(const b of bullets){b.x+=b.vx;b.y+=b.vy;b.l--;for(const f of foes)if(!f.dead&&Math.hypot(b.x-f.x,b.y-f.y)<f.r){f.dead=1;b.l=0;score++;boom(f.x,f.y,`hsl(${f.h},90%,60%)`)}}
+for(const p of parts){p.x+=p.vx;p.y+=p.vy;p.vx*=.95;p.vy*=.95;p.l--}
+for(const arr of[bullets,foes,parts])for(let i=arr.length-1;i>=0;i--)if(arr[i].l<=0||arr[i].dead)arr.splice(i,1);shake*=.85}
+function draw(){const sx=(Math.random()-.5)*shake,sy=(Math.random()-.5)*shake;x.setTransform(1,0,0,1,W/2-P.x+sx,H/2-P.y+sy);
+x.fillStyle='#0b0b18';x.fillRect(P.x-W,P.y-H,W*2,H*2);x.strokeStyle='#1f2240';x.lineWidth=2;const g=80;for(let gx=Math.floor((P.x-W)/g)*g;gx<P.x+W;gx+=g){x.beginPath();x.moveTo(gx,P.y-H);x.lineTo(gx,P.y+H);x.stroke()}for(let gy=Math.floor((P.y-H)/g)*g;gy<P.y+H;gy+=g){x.beginPath();x.moveTo(P.x-W,gy);x.lineTo(P.x+W,gy);x.stroke()}
+for(const f of foes){x.fillStyle=`hsl(${f.h},80%,55%)`;x.beginPath();x.arc(f.x,f.y,f.r,0,7);x.fill()}
+for(const b of bullets){x.fillStyle='#ffd84d';x.fillRect(b.x-3,b.y-3,6,6)}for(const p of parts){x.globalAlpha=Math.max(0,p.l/70);x.fillStyle=p.col;x.fillRect(p.x-2,p.y-2,4,4)}x.globalAlpha=1;
+x.save();x.translate(P.x,P.y);x.rotate(P.a);x.fillStyle='#7cf';x.beginPath();x.moveTo(18,0);x.lineTo(-12,-11);x.lineTo(-6,0);x.lineTo(-12,11);x.fill();x.restore();
+x.setTransform(1,0,0,1,0,0);x.fillStyle='#fff';x.font='700 28px system-ui';x.fillText('SCORE '+score,24,44)}
+(function loop(){if(running)step();draw();requestAnimationFrame(loop)})();
+</script>

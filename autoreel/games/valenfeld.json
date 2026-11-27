@@ -1,0 +1,19 @@
+{
+  "name": "Valenfeld",
+  "url": "https://www.spawn.co/@chubigans/valenfeld/play?room=main",
+  "pageUrl": "https://www.spawn.co/@chubigans/valenfeld",
+  "hook": "An Elder Scrolls-style RPG that runs in your browser. A bot played it so I didn't have to record anything.",
+  "viewport": [1280, 720],
+  "seconds": 120,
+  "capture": "spawn-client",
+  "spawn": {"as": "autoreel-main"},
+  "loadWait": 8000,
+  "start": [
+    {"clickAt": [0.5, 0.5]},
+    {"wait": 1000},
+    {"key": "x"},
+    {"wait": 500}
+  ],
+  "bot": {"type": "explorer", "mouseLook": true, "click": true, "keys": {"interact": "e"}, "escapeEvery": 25},
+  "cta": "Free in your browser on Spawn"
+}

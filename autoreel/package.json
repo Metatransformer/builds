@@ -1,0 +1,15 @@
+{
+  "name": "autoreel",
+  "version": "0.1.0",
+  "description": "Distribution for game devs: a bot plays your browser game, cuts the best moments into clips, and writes the devlog post.",
+  "type": "module",
+  "license": "MIT",
+  "bin": { "autoreel": "bin/autoreel.mjs" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "playwright": "^1.50.0"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "5.2.0"
+  }
+}
