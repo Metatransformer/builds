@@ -1,4 +1,4 @@
-import { chromium } from "playwright";
+import { launchBrowser } from "./util.mjs";
 import { join } from "node:path";
 import { ffmpeg } from "./util.mjs";
 
@@ -6,7 +6,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<
 
 /** Draw caption overlays as transparent PNGs with a real browser, so no ffmpeg font setup is needed. */
 export async function captionPngs(items, { channel } = {}) {
-  const browser = await chromium.launch({ channel: channel || process.env.AUTOREEL_CHANNEL || undefined, executablePath: process.env.AUTOREEL_CHROME || undefined });
+  const browser = await launchBrowser(channel);
   const page = await browser.newPage();
   for (const it of items) {
     const { w, h, path, layout, title, sub, tag } = it;

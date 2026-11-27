@@ -57,3 +57,19 @@ export function rng(seed = Date.now()) {
 export function slug(s) {
   return String(s).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 }
+
+/**
+ * A headless browser for captions and page reads: the given channel, else Playwright's bundled
+ * Chromium, else installed Chrome (so it works without `npx playwright install`).
+ */
+export async function launchBrowser(channel) {
+  const { chromium } = await import("playwright");
+  const opts = { executablePath: process.env.AUTOREEL_CHROME || undefined };
+  const want = channel || process.env.AUTOREEL_CHANNEL;
+  if (want || opts.executablePath) return chromium.launch({ ...opts, channel: want || undefined });
+  try {
+    return await chromium.launch(opts);
+  } catch (e) {
+    try { return await chromium.launch({ channel: "chrome" }); } catch { throw e; }
+  }
+}

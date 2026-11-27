@@ -1,11 +1,11 @@
-import { chromium } from "playwright";
+import { launchBrowser } from "../util.mjs";
 
 /**
  * Read a Spawn game page (https://www.spawn.co/@creator/game): name, description, play stats and
  * the creator's update notes. These notes are the raw material for devlog posts.
  */
 export async function spawnInfo(pageUrl, { channel } = {}) {
-  const browser = await chromium.launch({ channel: channel || process.env.AUTOREEL_CHANNEL || undefined, executablePath: process.env.AUTOREEL_CHROME || undefined });
+  const browser = await launchBrowser(channel);
   const page = await browser.newPage();
   await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
   await page.waitForTimeout(2500);
