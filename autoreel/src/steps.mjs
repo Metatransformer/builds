@@ -53,6 +53,20 @@ export async function runSteps(page, steps = [], log = () => {}, ctx = {}) {
 }
 
 let cursor = null;
+const cursorX = (w) => (cursor ? cursor.x : w / 2);
+
+/**
+ * Lift the mouse: let go of the pointer lock, put the cursor back in the middle, and take the lock
+ * again. The click that takes the lock reaches no game (Spawn's client says so), so nothing swings.
+ */
+export async function recenter(page, width = 1280, height = 720) {
+  await page.keyboard.press("Escape");
+  await sleep(250);
+  cursor = { x: width / 2, y: height / 2 };
+  await page.mouse.move(cursor.x, cursor.y);
+  await page.mouse.click(cursor.x, cursor.y);
+  await sleep(250);
+}
 /** Smooth relative mouse movement, which first-person games read as looking around. */
 export async function look(page, dx, dy, ms = 400) {
   const vp = page.viewportSize() || { width: 1280, height: 720 };
@@ -61,9 +75,10 @@ export async function look(page, dx, dy, ms = 400) {
   for (let i = 0; i < steps; i++) {
     cursor.x += dx / steps;
     cursor.y += dy / steps;
-    // keep the real cursor inside the viewport; games under pointer lock only read movementX/Y
-    if (cursor.x < 20 || cursor.x > vp.width - 20) cursor.x = vp.width / 2;
-    if (cursor.y < 20 || cursor.y > vp.height - 20) cursor.y = vp.height / 2;
+    // keep the real cursor inside the viewport; games under pointer lock only read movementX/Y.
+    // Jumping back to the centre would read as a turn the other way, so a look stops at the edge.
+    cursor.x = Math.min(vp.width - 2, Math.max(2, cursor.x));
+    cursor.y = Math.min(vp.height - 2, Math.max(2, cursor.y));
     await page.mouse.move(cursor.x, cursor.y);
     await sleep(ms / steps);
   }
@@ -107,7 +122,7 @@ const wrap = (d) => ((((d + 180) % 360) + 360) % 360) - 180;
  */
 export async function walkTo(page, name, [tx, tz], { tolerance = 1.2, timeout = 20000, run = false } = {}, log = () => {}) {
   const end = Date.now() + timeout;
-  let pxPerDeg = 1.6; // refined as we go
+  let pxPerDeg = 5; // refined as we go
   while (Date.now() < end) {
     const w = spawnWhere(name);
     if (!w) { log("walkTo: could not read the body's position"); return false; }
@@ -116,7 +131,10 @@ export async function walkTo(page, name, [tx, tz], { tolerance = 1.2, timeout = 
     const want = (Math.atan2(-dx, -dz) * 180) / Math.PI;
     const err = wrap(want - w.yaw);
     if (Math.abs(err) > 12) {
-      const px = Math.max(-400, Math.min(400, -err * pxPerDeg));
+      let px = Math.max(-400, Math.min(400, -err * pxPerDeg));
+      // the cursor cannot pass the viewport edge, so turn the long way round when it would
+      const vw = page.viewportSize()?.width || 1280, cx = cursorX(vw);
+      if (cx + px < 4 || cx + px > vw - 4) await recenter(page, vw);
       await look(page, px, 0, 250);
       await sleep(120);
       const w2 = spawnWhere(name);

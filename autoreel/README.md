@@ -56,7 +56,11 @@ publishers, a metrics loop).
 Steps: `wait`, `waitFor`, `click` (Playwright selector), `clickAt` ([x, y] as fractions), `key`,
 `hold` + `ms`, `type`, `look` ([dx, dy] + `ms`), `clickText` (visible text in any frame, `exact`
 optional), `waitText` (wait until text shows, `timeout`), and on Spawn `walkTo` ([x, z] world
-position, steered by reading the body's position from the sim; experimental, it does not route around walls).
+position, steered by reading the body's position from the sim; experimental: it walks straight lines, so chain waypoints around walls).
+
+A fixed body name (`"spawn": {"as": "autoreel-main"}`) keeps the game's save between runs, so
+`games/valenfeld.json` rejoins where the last run left off and skips the intro; `games/valenfeld-intro.json`
+plays the intro on a fresh body (`autoreel-{run}`).
 
 Tuning start steps: `--step-shots` saves a screenshot after every step to `<run>/steps/`.
 
