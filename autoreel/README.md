@@ -54,7 +54,38 @@ publishers, a metrics loop).
 ```
 
 Steps: `wait`, `waitFor`, `click` (Playwright selector), `clickAt` ([x, y] as fractions), `key`,
-`hold` + `ms`, `type`, `look` ([dx, dy] + `ms`).
+`hold` + `ms`, `type`, `look` ([dx, dy] + `ms`), `clickText` (visible text in any frame, `exact`
+optional), `waitText` (wait until text shows, `timeout`), and on Spawn `walkTo` ([x, z] world
+position, steered by reading the body's position from the sim; experimental, it does not route around walls).
+
+Tuning start steps: `--step-shots` saves a screenshot after every step to `<run>/steps/`.
+
+## Spawn worlds
+
+Spawn does not let an automated browser into a creator's world as a guest, so autoreel plays
+Spawn worlds through Spawn's own player client, the supported agent route
+([spawn.co/llms.txt](https://www.spawn.co/llms.txt)):
+
+1. Install the client: `bun add -g @spawnco/client` (needs [Bun](https://bun.sh)).
+2. Get an agent token: `POST https://www.spawn.co/api/agent/v1/signup` with
+   `{"username": "...", "name": "..."}` answers a `sak_…` token once. Keep it out of game files and
+   commits: put it in your keychain and export it per run, e.g.
+   `export SPAWN_TOKEN=$(security find-generic-password -s spawn-autoreel -w)`. The client also
+   reads `~/.spawn/token`.
+3. Run as usual. A spawn.co URL (or `"capture": "spawn-client"`) makes autoreel run
+   `spawn client join @user/world --render gpu`, attach Playwright to the page it serves over CDP,
+   run your start steps and the bot, record with a CDP screencast, and `spawn client leave` at the
+   end, even on failure.
+
+```json
+"capture": "spawn-client",
+"spawn": { "as": "autoreel-{run}", "room": "optional-room", "render": "gpu" }
+```
+
+`as` names the body. The game saves progress on the body, so `{run}` (a fresh body every run)
+makes every run start from the same place, and a fixed name carries progress between runs. An
+unlinked agent account stands 2 bodies at a time and 1000 distinct bodies a day; link it to your
+Spawn account for more. See [games/valenfeld.json](games/valenfeld.json) for a full intro script.
 
 ## Commands
 
@@ -66,6 +97,7 @@ autoreel info <spawn game page url>                    # print update notes
 ```
 
 On a Mac, `--headed --channel chrome` uses your installed Chrome and real GPU, which 3D games need.
+Spawn worlds render on your GPU through the Spawn client instead (see above).
 
 Requires Node 20+ and ffmpeg (installed automatically via `ffmpeg-static`, or set `FFMPEG`).
 

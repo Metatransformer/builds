@@ -38,7 +38,7 @@ export async function run(game, o = {}) {
     copyFileSync(o.video, video);
     log(`using existing footage ${o.video}`);
   } else {
-    ({ video, meta } = await capture(game, { outDir, seconds: o.seconds, seed: o.seed, headed: o.headed, channel: o.channel, log }));
+    ({ video, meta } = await capture(game, { outDir, seconds: o.seconds, seed: o.seed, headed: o.headed, channel: o.channel, stepShots: o.stepShots, log }));
   }
   const [update, analysis] = await Promise.all([
     o.noNotes ? null : latestUpdate(game, { channel: o.channel, log }),

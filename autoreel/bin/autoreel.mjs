@@ -17,6 +17,10 @@ options:
   --headed          show the browser (use on a Mac for real GPU rendering)
   --channel chrome  drive your installed Chrome instead of Playwright's Chromium
   --no-notes        skip reading update notes
+  --step-shots      save a screenshot after each start step (runs/x/steps/), for tuning them
+
+Spawn worlds (spawn.co URLs, or "capture": "spawn-client") are played through Spawn's own client:
+bun add -g @spawnco/client, and an agent token in SPAWN_TOKEN (or ~/.spawn/token).
 `;
 
 const argv = process.argv.slice(2);
@@ -49,7 +53,7 @@ try {
   else if (cmd === "info") console.log(JSON.stringify(await spawnInfo(pos[0], opts), null, 2));
   else if (cmd === "capture") {
     const g = loadGame(pos[0]);
-    const r = await capture(g, { outDir: resolve(opts.out || "runs/capture"), seconds: opts.seconds, seed: opts.seed, headed: opts.headed, channel: opts.channel });
+    const r = await capture(g, { outDir: resolve(opts.out || "runs/capture"), seconds: opts.seconds, seed: opts.seed, headed: opts.headed, channel: opts.channel, stepShots: opts.stepShots });
     console.log(r.video);
   } else if (cmd === "run" || cmd === "cut") {
     if (cmd === "cut" && !opts.video) throw new Error("cut needs --video");
