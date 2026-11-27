@@ -47,6 +47,10 @@ export async function run(game, o = {}) {
   const length = o.length ?? game.clipSeconds ?? 10;
   const { picked } = pickMoments(analysis, { length, count: o.clips ?? 3, skipStart: (meta.startOffset || 0) + 2 });
   if (!picked.length) throw new Error(`capture too short or blank: ${analysis.duration}s`);
+  const moving = analysis.frames.filter((f) => f.ydif > 0.5).length / Math.max(1, analysis.frames.length);
+  if (moving < 0.1 || picked[0].mean < 0.05) {
+    throw new Error(`nothing moved in the capture (${Math.round(moving * 100)}% of frames changed). See ${join(outDir, "last-frame.png")}: a menu, sign-in wall or error screen is likely.`);
+  }
   log(`best moments: ${picked.map((p) => `${p.start.toFixed(1)}s (${p.score})`).join(", ")}`);
 
   const [vw, vh] = game.viewport || [1280, 720];
