@@ -10,11 +10,13 @@ import { sleep } from "./util.mjs";
  *   { "hold": "w", "ms": 1500 }           hold a key
  *   { "type": "hello" }                   type text
  *   { "look": [dx, dy], "ms": 500 }       move the mouse by dx,dy pixels (mouse look)
+ *   { "attack": 10, "every": 350 }        left-click N times without moving the cursor
  *   { "waitFor": "canvas", "timeout": 30000 }
  *   { "clickText": "Continue" }           click visible text in any frame (game UIs often live in iframes)
  *   { "waitText": "Goodbye", "timeout": 30000 }  wait until text shows in any frame (skips on timeout)
  *   { "walkTo": [x, z] }                  Spawn client only: turn and walk to a world position, read from
  *                                         the sim (`spawn client where`); "tolerance" m, "timeout" ms
+ *   { "where": true }                     Spawn client only: log the body's position
  */
 export async function runSteps(page, steps = [], log = () => {}, ctx = {}) {
   const vp = page.viewportSize() || ctx.viewport || { width: 1280, height: 720 };
@@ -36,11 +38,27 @@ export async function runSteps(page, steps = [], log = () => {}, ctx = {}) {
         await page.keyboard.up(s.hold);
       } else if (s.type) await page.keyboard.type(s.type, { delay: 40 });
       else if (s.look) await look(page, s.look[0], s.look[1], s.ms ?? 400);
+      else if (s.attack) {
+        // left clicks where the cursor already is: a click elsewhere would read as a turn under pointer lock
+        for (let n = 0; n < s.attack; n++) {
+          await page.mouse.down();
+          await sleep(60);
+          await page.mouse.up();
+          await sleep(s.every ?? 350);
+        }
+      }
       else if (s.clickText) await clickText(page, s.clickText, s.timeout ?? 4000, log, s.exact);
       else if (s.waitText) await waitText(page, s.waitText, s.timeout ?? 30000, log);
       else if (s.walkTo) {
         if (!ctx.spawn) log("walkTo needs the spawn-client capture; skipped");
-        else await walkTo(page, ctx.spawn.name, s.walkTo, s, log);
+        else {
+          const ok = await walkTo(page, ctx.spawn.name, s.walkTo, s, log);
+          const w = spawnWhere(ctx.spawn.name);
+          log(`walkTo [${s.walkTo}] ${ok ? "reached" : "stopped"} at ${w ? `(${w.x}, ${w.z}) yaw ${w.yaw}` : "?"}`);
+        }
+      } else if (s.where && ctx.spawn) {
+        const w = spawnWhere(ctx.spawn.name);
+        log(`step ${i} where: ${w ? `(${w.x}, ${w.y}, ${w.z}) yaw ${w.yaw}` : "?"}`);
       }
     } catch (e) {
       log(`step failed ${JSON.stringify(s)}: ${e.message.split("\n")[0]}`);
@@ -58,12 +76,19 @@ const cursorX = (w) => (cursor ? cursor.x : w / 2);
 /**
  * Lift the mouse: let go of the pointer lock, put the cursor back in the middle, and take the lock
  * again. The click that takes the lock reaches no game (Spawn's client says so), so nothing swings.
+ * Games that open a pause menu on Escape (Valenfeld does) get a second Escape to close it; without
+ * it the menu stays up, the body stops answering keys, and walkTo stalls. `menuOnEscape: false`
+ * in the step skips that second press.
  */
-export async function recenter(page, width = 1280, height = 720) {
+export async function recenter(page, width = 1280, height = 720, { menuOnEscape = true } = {}) {
   await page.keyboard.press("Escape");
   await sleep(250);
   cursor = { x: width / 2, y: height / 2 };
   await page.mouse.move(cursor.x, cursor.y);
+  if (menuOnEscape) {
+    await page.keyboard.press("Escape");
+    await sleep(250);
+  }
   await page.mouse.click(cursor.x, cursor.y);
   await sleep(250);
 }
@@ -120,7 +145,7 @@ const wrap = (d) => ((((d + 180) % 360) + 360) % 360) - 180;
  * Closed-loop walk for Spawn bodies: read the sim, turn toward the target with the mouse (the
  * look is pointer-locked), walk a short burst, repeat. Yaw 0 faces -z and turning right lowers it.
  */
-export async function walkTo(page, name, [tx, tz], { tolerance = 1.2, timeout = 20000, run = false } = {}, log = () => {}) {
+export async function walkTo(page, name, [tx, tz], { tolerance = 1.2, timeout = 20000, run = false, menuOnEscape = true } = {}, log = () => {}) {
   const end = Date.now() + timeout;
   let pxPerDeg = 5; // refined as we go
   while (Date.now() < end) {
@@ -134,7 +159,7 @@ export async function walkTo(page, name, [tx, tz], { tolerance = 1.2, timeout = 
       let px = Math.max(-400, Math.min(400, -err * pxPerDeg));
       // the cursor cannot pass the viewport edge, so turn the long way round when it would
       const vw = page.viewportSize()?.width || 1280, cx = cursorX(vw);
-      if (cx + px < 4 || cx + px > vw - 4) await recenter(page, vw);
+      if (cx + px < 4 || cx + px > vw - 4) await recenter(page, vw, page.viewportSize()?.height || 720, { menuOnEscape });
       await look(page, px, 0, 250);
       await sleep(120);
       const w2 = spawnWhere(name);
